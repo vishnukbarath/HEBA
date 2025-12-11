@@ -24,3 +24,20 @@ def safe_loader(path):
         print(f"[WARNING] Corrupted image skipped: {path}")
         return None  # return None → handled automatically by DataLoader
 
+
+# ============================================================
+# CONFIG
+# ============================================================
+
+DATASET_ROOT = r"C:\Users\vishn\Documents\HEBA\plus"
+BATCH_SIZE = 64
+NUM_CLASSES = 8
+IMG_SIZE = 96
+LR = 1e-4
+EPOCHS = 40
+WEIGHT_DECAY = 1e-4
+CHECKPOINT_PATH = "best_emotion_model.pth"
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"[INFO] Using device = {device}")
+
