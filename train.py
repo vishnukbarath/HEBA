@@ -62,3 +62,37 @@ val_test_transform = transforms.Compose([
     transforms.ToTensor(),
     transforms.Normalize((0.5,), (0.5,))
 ])
+
+# ============================================================
+# DATASET CLASS OVERRIDE (TO SKIP CORRUPTED IMAGES)
+# ============================================================
+
+class SafeImageFolder(datasets.ImageFolder):
+    def __getitem__(self, index):
+        path, target = self.samples[index]
+        img = safe_loader(path)
+
+        if img is None:
+            # corrupted image → skip by loading next valid item
+            new_index = (index + 1) % len(self.samples)
+            return self.__getitem__(new_index)
+
+        if self.transform:
+            img = self.transform(img)
+        return img, target
+
+
+# ============================================================
+# LOAD DATASETS
+# ============================================================
+
+train_ds = SafeImageFolder(os.path.join(DATASET_ROOT, "train"), transform=train_transform)
+val_ds = SafeImageFolder(os.path.join(DATASET_ROOT, "validation"), transform=val_test_transform)
+test_ds = SafeImageFolder(os.path.join(DATASET_ROOT, "test"), transform=val_test_transform)
+
+train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True)
+val_loader = DataLoader(val_ds, batch_size=BATCH_SIZE, shuffle=False)
+test_loader = DataLoader(test_ds, batch_size=BATCH_SIZE, shuffle=False)
+
+print("Classes:", train_ds.classes)
+
