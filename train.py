@@ -96,3 +96,110 @@ test_loader = DataLoader(test_ds, batch_size=BATCH_SIZE, shuffle=False)
 
 print("Classes:", train_ds.classes)
 
+# ============================================================
+# MODEL
+# ============================================================
+
+model = models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V1)
+model.fc = nn.Linear(model.fc.in_features, NUM_CLASSES)
+model = model.to(device)
+
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.AdamW(model.parameters(), lr=LR, weight_decay=WEIGHT_DECAY)
+
+
+# ============================================================
+# TRAINING LOOP
+# ============================================================
+
+def train_one_epoch():
+    model.train()
+    running_loss = 0
+    correct = 0
+    total = 0
+
+    progress = tqdm(train_loader, desc="Train", leave=False)
+
+    for img, lbl in progress:
+        img, lbl = img.to(device), lbl.to(device)
+        optimizer.zero_grad()
+        out = model(img)
+        loss = criterion(out, lbl)
+        loss.backward()
+        optimizer.step()
+
+        running_loss += loss.item() * img.size(0)
+        _, pred = torch.max(out, 1)
+        correct += (pred == lbl).sum().item()
+        total += lbl.size(0)
+
+        progress.set_postfix(loss=loss.item())
+
+    return running_loss / total, correct / total
+
+
+def validate():
+    model.eval()
+    running_loss = 0
+    correct = 0
+    total = 0
+
+    with torch.no_grad():
+        progress = tqdm(val_loader, desc="Validation", leave=False)
+        for img, lbl in progress:
+            img, lbl = img.to(device), lbl.to(device)
+            out = model(img)
+            loss = criterion(out, lbl)
+
+            running_loss += loss.item() * img.size(0)
+            _, pred = torch.max(out, 1)
+            correct += (pred == lbl).sum().item()
+            total += lbl.size(0)
+
+    return running_loss / total, correct / total
+
+
+# ============================================================
+# MAIN TRAINING
+# ============================================================
+
+best_acc = 0
+
+print("\n[INFO] Starting training...\n")
+
+for epoch in range(EPOCHS):
+    print(f"\n========== EPOCH {epoch+1}/{EPOCHS} ==========")
+
+    t_loss, t_acc = train_one_epoch()
+    v_loss, v_acc = validate()
+
+    print(f"Train Loss: {t_loss:.4f} | Train Acc: {t_acc:.4f}")
+    print(f"Val   Loss: {v_loss:.4f} | Val   Acc: {v_acc:.4f}")
+
+    if v_acc > best_acc:
+        best_acc = v_acc
+        torch.save(model.state_dict(), CHECKPOINT_PATH)
+        print(f"[INFO] Best model saved! (Val Acc = {best_acc:.4f})")
+
+print(f"\n[INFO] Training Complete. Best Validation Accuracy = {best_acc:.4f}")
+
+
+# ============================================================
+# TESTING
+# ============================================================
+
+model.load_state_dict(torch.load(CHECKPOINT_PATH))
+model.eval()
+
+correct = 0
+total = 0
+
+with torch.no_grad():
+    for img, lbl in test_loader:
+        img, lbl = img.to(device), lbl.to(device)
+        out = model(img)
+        _, pred = torch.max(out, 1)
+        correct += (pred == lbl).sum().item()
+        total += lbl.size(0)
+
+print(f"\n[TEST] Accuracy = {correct/total:.4f}")
