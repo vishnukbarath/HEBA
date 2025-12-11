@@ -41,3 +41,24 @@ CHECKPOINT_PATH = "best_emotion_model.pth"
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"[INFO] Using device = {device}")
 
+# ============================================================
+# TRANSFORMS
+# ============================================================
+
+train_transform = transforms.Compose([
+    transforms.Grayscale(num_output_channels=3),
+    transforms.Resize((IMG_SIZE, IMG_SIZE)),
+    transforms.RandomHorizontalFlip(),
+    transforms.RandomRotation(10),
+    transforms.RandomResizedCrop(IMG_SIZE, scale=(0.9, 1.1)),
+    transforms.ColorJitter(brightness=0.2, contrast=0.2),
+    transforms.ToTensor(),
+    transforms.Normalize((0.5,), (0.5,))
+])
+
+val_test_transform = transforms.Compose([
+    transforms.Grayscale(num_output_channels=3),
+    transforms.Resize((IMG_SIZE, IMG_SIZE)),
+    transforms.ToTensor(),
+    transforms.Normalize((0.5,), (0.5,))
+])
